@@ -28,10 +28,20 @@ exit_msg :- write('\n\nGoodbye!\n\n').
 % MENUS %
 
 main_menu :-
-  open('src/main_menu.txt', read, Str),
-  read_file(Str,Lines),
-  close(Str),
-  write_file(Lines).
+    write(' _______  _______  _     _  _______  ___      _______\n'),
+    write('|       ||   _   || | _ | ||   _   ||   |    |       |\n'),
+    write('|   _   ||  |_|  || || || ||  |_|  ||   |    |    ___|\n'),
+    write('|  | |  ||       ||       ||       ||   |    |   |___ \n'),
+    write('|  |_|  ||       ||       ||       ||   |___ |    ___|\n'),
+    write('|      | |   _   ||   _   ||   _   ||       ||   |___ \n'),
+    write('|____||_||__| |__||__| |__||__| |__||_______||_______|\n'),
+    write('\n'),
+    write('1. - Play\n'),
+    write('2. - Quit\n').
+    % open('src/main_menu.txt', read, Str),
+    % read_file(Str,Lines),
+    % close(Str),
+    % write_file(Lines).
 
 play_menu :-
     write('How would you like to play? Please input the role of each player in the format [P1/P2.].\nAvailable roles:\n[h] - Human player;\n[c-1] - Easy computer;\n[c-2] - Hard computer;\n\n'),

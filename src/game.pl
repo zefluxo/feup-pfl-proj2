@@ -15,7 +15,6 @@ mode(h/h).
 curr_pieces(8).
 adv_pieces(8).
 
-
 % MENU LOGIC %
 
 play :-
