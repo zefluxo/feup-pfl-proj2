@@ -10,8 +10,8 @@ board([['tt', ' ', ' ', 'tt'],
        [' ', ' ', ' ', ' '],
        ['tt', ' ', ' ', 'tt']]).
 
-:- dynamic(mode/1).
 mode(h/h).
+:- dynamic(mode/1).
 
 replace([_|T], 0, X, [X|T]):- !.
 replace([H|T], I, X, [H|R]):-
@@ -46,28 +46,41 @@ menu(main_menu) :-
     ).
 
 menu(quit) :- quit_menu.
-menu(play) :- play_menu.
+menu(play) :- 
+    play_menu(Mode),
+    retractall(mode(_)),
+    assert(mode(Mode)), !.
 
 % GAME LOGIC %
 
 start_game :-
     initial_state(Board),
-    display_game(Board),    
+    display_game(Board),
     mode(StartPlayer/SndPlayer),
-    run_game(Board-16, StartPlayer-d, SndPlayer-l).
+    run_game(Board-16, StartPlayer/d, SndPlayer/l).
 
 initial_state(Board) :-
     board(Board).
 
-run_game(Board-0, Player, SndPlayer) :-    
-    game_over(Board, Player),
-    game_over(Board, SndPlayer).
+% run_game(Board-0, Player, SndPlayer) :-    
+%     end_draw,fail,!.
 
-run_game(Board-Turns, Player, SndPlayer) :-
-    not(game_over(Board, Player)) -> 
+% run_game(Board-Turns, Player, SndPlayer) :-
+%     (
+%         game_over(Board, SndPlayer) -> 
+%         (
+%             finish(SndPlayer)
+%         );
+%         game_over(Board, Player) ->
+%         (
+%             finish(Player)
+%         )
+%     ).
+
+run_game(Board-Turns, h/Color, SndPlayer) :-
     (
         get_piece_placement(Board, Pos), % Gets us the position of the stack to be played
-        place_piece(Board, Player, Pos, PBoard), % Places the piece effectively on the right stack on the board
+        place_piece(Board, h/Color, Pos, PBoard), % Places the piece effectively on the right stack on the board
         display_game(PBoard),
         NewTurns is Turns - 1,
         CurrPos = Pos,
@@ -75,26 +88,108 @@ run_game(Board-Turns, Player, SndPlayer) :-
         get_stack(PBoard, CurrPos, Stack),
         remove_stack(PBoard, CurrPos, RBoard),
         move_stack(Player, RBoard, CurrPos, PrevPos, Stack, MBoard),
-        run_game(MBoard-NewTurns, SndPlayer, Player)
+        run_game(MBoard-NewTurns, SndPlayer, h/Color)
 
-    ); 
-    finish(Player), !.
+    ).
+
+run_game(Board-Turns, (c-Level)/Color, SndPlayer) :-
+    (
+        Level is 1 ->
+        (
+            cpu_placement(Board, (c-Level)/Color, Pos),
+            place_piece(Board, (c-Level)/Color, Pos, PBoard),
+            display_game(PBoard),
+            NewTurns is Turns - 1,    
+            CurrPos = Pos,
+            PrevPos = Pos,
+            get_stack(PBoard, CurrPos, Stack),
+            remove_stack(PBoard, CurrPos, RBoard),
+            cpu_movement(Level, RBoard, CurrPos, PrevPos, Stack, MBoard),
+            write('\n\n NEW PLAYER TURN SWITCH AROUND NOW \n\n'),
+            display_game(MBoard),
+            run_game(MBoard-NewTurns, SndPlayer, (c-Level)/Color)
+        );
+        Level is 2 ->
+        (
+            writeln('Level 2 CPU')
+        )
+    ).
+
+cpu_movement(Level, Board, CurrPos, PrevPos, Stack, NBoard) :-
+    (
+        Level is 1 ->
+        (
+            atom_length(Stack, Length),
+            Length > 0 -> 
+            (
+                find_moves(Board, CurrPos, PrevPos, Moves),
+                random_member(Move, Moves),
+                NPrevPos = CurrPos,
+                move(Board, Stack, Move, NStack, MBoard),
+                display_game(MBoard),
+                cpu_movement(Level, MBoard, Move, NPrevPos, NStack, NBoard)
+            ); NBoard = Board, !
+        
+        );
+        Level is 2 ->
+        (
+            writeln('Level 2 CPU')
+        )
+    ).
+
+
+cpu_placement(Board, (c-Level)/Color, Place) :-
+    (
+        Level is 1 ->
+        (
+            find_placements(Board, Places),
+            random_member(Place, Places)
+        );
+        Level is 2 ->
+        (
+            writeln('Level 2 CPU')
+        )
+    ).
+
+within_board(Board, X/Y) :-
+    between(0, 3, X), 
+    between(0, 3, Y).
+
+backtracking(PX/PY, X/Y) :-
+    X = PX, Y = PY.
+
+valid_placement(Board, X/Y) :-
+    within_board(Board, X/Y),
+    nth0(Y, Board, Row),
+    nth0(X, Row, Placement),
+    Placement \= ' '.
+
+find_placements(Board, Places) :-
+    findall(Move, valid_placement(Board, Move), Places).
+
+valid_movement(Board, CX/CY, PX/PY, NX/NY) :-
+    % inside the board %
+    within_board(Board, NX/NY),
+    % not backtracking %
+    not(backtracking(PX/PY, NX/NY)),
+    % orthogonally adjacent %
+    (((plus(CX, -1, NX); succ(CX, NX)), CY = NY);
+    ((plus(CY, -1, NY); succ(CY, NY)), CX = NX)).
+    
+find_moves(Board, CurrPos, PrevPos, Moves) :-
+    findall(Move, valid_movement(Board, CurrPos, PrevPos, Move), Moves).
 
 move_stack(Player, Board, CurrPos, PrevPos, Stack, NBoard) :-
     atom_length(Stack, Length),
     Length > 0 -> 
     (
-        not(game_over(Board, Player)) -> (
-            get_move(Board, Stack, CurrPos, PrevPos, Move),
-            NPrevPos = CurrPos,
-            move(Board, Stack, Move, NStack, RBoard),
-            display_game(RBoard),
-            move_stack(Player, RBoard, Move, NPrevPos, NStack, NBoard)
-        ); finish(Player), !
+        get_move(Board, Stack, CurrPos, PrevPos, Move),
+        NPrevPos = CurrPos,
+        move(Board, Stack, Move, NStack, RBoard),
+        display_game(RBoard),
+        move_stack(Player, RBoard, Move, NPrevPos, NStack, NBoard)
 
     ); 
-    game_over(Board, Player) -> finish(Player), !;
-    write('Time for the other player to have his turn!\n\n'),
     NBoard = Board, !.
 
 remove_stack(Board, X/Y, NBoard) :- 
@@ -211,7 +306,7 @@ check_diagonals(Board, Player-Color) :-
     check_first_diagonal(Board, Player-Color);
     check_second_diagonal(Board, Player-Color).
 
-place_piece(Board, Player-Color, X/Y, PBoard) :-
+place_piece(Board, Player/Color, X/Y, PBoard) :-
     get_by_index(Board, Y, Line),
     get_by_index(Line, X, Stack),
     atom_concat(Stack, Color, NStack),
@@ -230,4 +325,3 @@ move(Board, Stack, X/Y, NStack, NBoard) :-
     get_by_index(Board, Y, Line),
     replace(Line, X, Replaced, NLine),
     replace(Board, Y, NLine, NBoard).
-

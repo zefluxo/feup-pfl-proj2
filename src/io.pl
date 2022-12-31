@@ -39,13 +39,27 @@ main_menu :-
     write('1. - Play\n'),
     write('2. - Quit\n').
 
-play_menu :-
-    write('\n\nStacks are represented as "bottom -> top"\n'),
+
+validate_mode(P1/P2) :-
+    ground(P1), ground(P2),
+    validate_player(P1), validate_player(P2).
+
+validate_player(h).
+validate_player(c-Level) :-
+    1 is Level; 2 is Level.
+    
+play_menu(Mode) :-
+    write('Stacks are represented as "bottom -> top"\n'),
     write('How would you like to play? Please input the role of each player in the format [P1/P2.].\nAvailable roles:\n[h] - Human player;\n[c-1] - Easy computer;\n[c-2] - Hard computer;\n\n'),
-    read(Mode),
-    validate_mode(Mode),
-    retract(mode(_)),
-    assert(mode(Mode)), !.
+    read(NMode),
+    (
+        validate_mode(NMode) -> 
+        (
+            Mode = NMode,!
+        );
+        write('Not a valid gamemode! Try again...\n'),
+        !, play_menu(Mode)
+    ).
 
 quit_menu :-
     write('\n\nThank you for playing. Goodbye!\n\n'),
@@ -54,18 +68,14 @@ quit_menu :-
 display_game(Board) :-
     draw_board(Board).
 
-validate_mode(P1/P2) :-
-    validate_player(P1), validate_player(P2).
-
-validate_player(h).
-validate_player(c-Level) :-
-    1 is Level; 2 is Level.
-
 finish(Winner-Color) :-
     Color = 'd' -> format('YOU WIN ~w!!! LEZZZZZ GOOOOOO!!!!', ['Player 1']);
     format('YOU WIN ~w!!! LEZZZZZ GOOOOOO!!!!', ['Player 2']),
-    fail.
+    fail,!.
 
+end_draw :-
+    format('Draw!!!! Looks like you are evenly matched!~n'),
+    fail,!.
 
 % BOARD DRAWING %
 
@@ -157,17 +167,15 @@ get_piece_placement(Board, Pos) :-
             row_col_to_value(Placement, X, Y),
             Pos = X/Y,
             valid_piece_placement(Board, Pos) ->
-            !; get_piece_placement(Board, Pos)
+            (
+                !
+            ); 
+            write('Not a valid place! Try again...\n'),
+            !, get_piece_placement(Board, Pos)
         );
+        write('Not a valid place! Try again...\n'),
         !, get_piece_placement(Board, Pos)
     ).
-
-% check_valid_move(CX/CY, NX/NY) :- 
-%     NCX is CX - 1,
-%     PCX is CX + 1,
-%     NCY is CY - 1,
-%     PCY is CY + 1,
-%     member(NX/NY, [NCX/CY, PCX/CY, CX/NCY, CX/PCY]).
 
 check_backtrack(CX/CY, NX/NY) :-
     CY = NY, CX = NX.
