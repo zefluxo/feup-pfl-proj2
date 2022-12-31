@@ -38,12 +38,9 @@ main_menu :-
     write('\n'),
     write('1. - Play\n'),
     write('2. - Quit\n').
-    % open('src/main_menu.txt', read, Str),
-    % read_file(Str,Lines),
-    % close(Str),
-    % write_file(Lines).
 
 play_menu :-
+    write('Stacks are represented as "bottom -> top"\n'),
     write('How would you like to play? Please input the role of each player in the format [P1/P2.].\nAvailable roles:\n[h] - Human player;\n[c-1] - Easy computer;\n[c-2] - Hard computer;\n\n'),
     read(Mode),
     validate_mode(Mode),
@@ -54,8 +51,7 @@ quit_menu :-
     write('\n\nThank you for playing. Goodbye!\n\n'),
     fail. 
 
-display_game(Board-_) :-
-    write(Board),
+display_game(Board) :-
     draw_board(Board).
 
 validate_mode(P1/P2) :-
@@ -66,8 +62,7 @@ validate_player(c-Level) :-
     1 is Level; 2 is Level.
 
 finish(Winner) :-
-    format('YOU ~n1!!! LEZZZZZ GOOOOOO!!!!', [Winner]),
-    fail.
+    format('YOU WIN ~w!!! LEZZZZZ GOOOOOO!!!!', [Winner]).
 
 % BOARD DRAWING %
 
@@ -118,5 +113,99 @@ draw_stack(X, R, C) :-
 
 % Movement %
 
-get_move(GameState, Player, Move).
-get_piece_placement(GameState, Player, PGameState).
+get_by_index([X|_], 0, X) :- !.
+get_by_index([X|L], Index, Line) :-
+    NewIndex is Index-1,
+    get_by_index(L, NewIndex, Line).
+
+get_stack(Board, Col/Row, Stack) :-
+    get_by_index(Board, Row, Line),
+    get_by_index(Line, Col, Stack).
+
+get_stack_top(Board, Placement, Top) :-
+    get_stack(Board, Placement, Stack),
+    sub_atom(Stack, _, 1, 0, Top).
+
+row_col_to_value(Col/Row, X, Y) :-
+    char_code(Col, ColCode),
+    X is ColCode-97,
+    Y is Row-1.
+
+value_to_row_col(Col/Row, X, Y) :-
+    ColCode is Col+65,
+    char_code(ColSymb, ColCode),
+    X = ColSymb,
+    Y is Row+1.
+
+valid_row_col(Col/Row) :- 
+    member(Row, [1, 2, 3, 4]),
+    member(Col, ['a', 'b', 'c', 'd']).
+
+valid_piece_placement(Board, Pos) :-
+    get_stack(Board, Pos, Stack),
+    not(member(Stack, [' '])).
+
+get_piece_placement(Board, Pos) :-
+    write('Where would you like to place your piece (Col/Row)?\n'),
+    read(Placement),
+    (
+        valid_row_col(Placement) ->
+        (
+            row_col_to_value(Placement, X, Y),
+            Pos = X/Y,
+            valid_piece_placement(Board, Pos) ->
+            !; get_piece_placement(Board, Pos)
+        );
+        !, get_piece_placement(Board, Pos)
+    ).
+
+% check_valid_move(CX/CY, NX/NY) :- 
+%     NCX is CX - 1,
+%     PCX is CX + 1,
+%     NCY is CY - 1,
+%     PCY is CY + 1,
+%     member(NX/NY, [NCX/CY, PCX/CY, CX/NCY, CX/PCY]).
+
+check_backtrack(CX/CY, NX/NY) :-
+    CY = NY, CX = NX.
+
+check_valid_move(CY/CX, NY/NX) :-
+    writeln(CY/CX),
+    writeln(NY/NX),
+    (NX is CX + 1 ; NX is CX - 1),
+    CY = NY.
+
+check_valid_move(CY/CX, NY/NX) :-
+    writeln(CY/CX),
+    writeln(NY/NX),
+    CX = NX,
+    (NY is CY + 1 ; NY is CY - 1).
+
+get_move(Board, Stack, CurrPos, PrevPos, Move) :- 
+    value_to_row_col(CurrPos, CurrY, CurrX),
+    value_to_row_col(PrevPos, PrevY, PrevX),
+    format('Where would you like to move (Row/Col?)~nCurrent stack: ~w~nCurrent position: ~w~w~nPrevious position: ~w~w~n', [Stack, CurrY, CurrX, PrevY, PrevX]),
+    read(Placement),
+    (
+        valid_row_col(Placement) ->
+        (
+            row_col_to_value(Placement, X, Y),
+            Pos = X/Y,
+            not(check_backtrack(Pos, PrevPos)) -> 
+            (
+                row_col_to_value(Placement, X, Y),
+                Pos = X/Y, 
+                check_valid_move(CurrPos, Pos) ->
+                (
+                    Move = Pos, !
+                );
+                write('Invalid move! Try again...\n'),
+                !, get_move(Board, Stack, CurrPos, PrevPos, Move)
+            );
+            write('Invalid move! Try again...\n'),
+            !, get_move(Board, Stack, CurrPos, PrevPos, Move)
+        );
+        write('Invalid move! Try again...\n'),
+        !, get_move(Board, Stack, CurrPos, PrevPos, Move)
+    ).
+
