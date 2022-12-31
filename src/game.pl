@@ -1,4 +1,5 @@
 :-consult('io.pl').
+
 % BOARD/MODE %
 
 tan('t').
@@ -9,21 +10,8 @@ board([['tt', ' ', ' ', 'tt'],
        [' ', ' ', ' ', ' '],
        ['tt', ' ', ' ', 'tt']]).
 
-mode(h/h).
 :- dynamic(mode/1).
-
-get_by_index([X|_], 0, X) :- !.
-get_by_index([X|L], Index, Item) :-
-    NewIndex is Index-1,
-    get_by_index(L, NewIndex, Item).
-
-get_stack(Board, Row/Col, Stack) :-
-    get_by_index(Board, Row, Line),
-    get_by_index(Line, Col, Stack).
-
-get_stack_top(Board, Placement, Top) :-
-    get_stack(Board, Placement, Stack),
-    sub_atom(Stack, _, 1, 0, Top).
+mode(h/h).
 
 replace([_|T], 0, X, [X|T]):- !.
 replace([H|T], I, X, [H|R]):-
@@ -72,11 +60,12 @@ initial_state(Board) :-
     board(Board).
 
 run_game(Board-0, Player, SndPlayer) :-    
-    game_over(Board, Winner), !,
-    finish(Winner).
-run_game(Board-Turns, Player, SndPlayer) :-
-    (
+    game_over(Board, Player),
+    game_over(Board, SndPlayer).
 
+run_game(Board-Turns, Player, SndPlayer) :-
+    not(game_over(Board, Player)) -> 
+    (
         get_piece_placement(Board, Pos), % Gets us the position of the stack to be played
         place_piece(Board, Player, Pos, PBoard), % Places the piece effectively on the right stack on the board
         display_game(PBoard),
@@ -85,33 +74,142 @@ run_game(Board-Turns, Player, SndPlayer) :-
         PrevPos = Pos,
         get_stack(PBoard, CurrPos, Stack),
         remove_stack(PBoard, CurrPos, RBoard),
-        move_stack(RBoard, CurrPos, PrevPos, Stack, MBoard),
-        write('\n\n NEW PLAYER TURN SWITCH AROUND NOW \n\n'),
-        display_game(MBoard),
+        move_stack(Player, RBoard, CurrPos, PrevPos, Stack, MBoard),
         run_game(MBoard-NewTurns, SndPlayer, Player)
 
-    ).
+    ); 
+    finish(Player), !.
 
-move_stack(Board, CurrPos, PrevPos, Stack, NBoard) :-
+move_stack(Player, Board, CurrPos, PrevPos, Stack, NBoard) :-
     atom_length(Stack, Length),
     Length > 0 -> 
     (
-        get_move(Board, Stack, CurrPos, PrevPos, Move),
-        NPrevPos = CurrPos,
-        move(Board, Stack, Move, NStack, RBoard),
-        display_game(RBoard),
-        move_stack(RBoard, Move, NPrevPos, NStack, NBoard)
-    ); NBoard = Board, !.
+        not(game_over(Board, Player)) -> (
+            get_move(Board, Stack, CurrPos, PrevPos, Move),
+            NPrevPos = CurrPos,
+            move(Board, Stack, Move, NStack, RBoard),
+            display_game(RBoard),
+            move_stack(Player, RBoard, Move, NPrevPos, NStack, NBoard)
+        ); finish(Player), !
 
-remove_stack(Board, X/Y, NBoard) :-
+    ); 
+    game_over(Board, Player) -> finish(Player), !;
+    write('Time for the other player to have his turn!\n\n'),
+    NBoard = Board, !.
+
+remove_stack(Board, X/Y, NBoard) :- 
     get_by_index(Board, Y, Line),
     replace(Line, X, ' ', NLine),
     replace(Board, Y, NLine, NBoard).
 
 
-game_over(GameState, Winner) :-
+game_over(Board, Player) :-
     % CHECK IF GAME OVER
-    write('Not Working Yet'), fail.
+    check_horizontals(Board, Player, 0);
+    check_verticals(Board, Player, 0);
+    check_diagonals(Board, Player).
+
+check_horizontal(Row, Player-Color) :-
+    get_by_index(Row, 0, Stack1), 
+    get_by_index(Row, 1, Stack2),
+    get_by_index(Row, 2, Stack3),
+    get_by_index(Row, 3, Stack4),
+
+    sub_atom(Stack1, _, 1, 0, Element1),
+    sub_atom(Stack2, _, 1, 0, Element2),
+    sub_atom(Stack3, _, 1, 0, Element3),
+    sub_atom(Stack4, _, 1, 0, Element4),
+
+    Element1 = Color ->
+    (
+        (Element1 = Element2, Element2 = Element3, Element3 = Element4)
+    ).
+
+check_horizontals(Board, Player-Color, RowNumber) :-
+    RowNumber < 4 ->
+    (
+        get_by_index(Board, RowNumber, Row),
+        check_horizontal(Row, Player-Color) -> 
+        (
+            true
+        );
+        NRowNumber is RowNumber + 1,
+        check_horizontals(Board, Player-Color, NRowNumber)
+
+    ).
+
+check_verticals(Board, Player-Color, ColNumber) :-
+    ColNumber < 4 ->
+    (
+        get_by_index(Board, 0, Line1),
+        get_by_index(Board, 1, Line2),
+        get_by_index(Board, 2, Line3),
+        get_by_index(Board, 3, Line4),
+    
+        get_by_index(Line1, ColNumber, Stack1),
+        get_by_index(Line2, ColNumber, Stack2),
+        get_by_index(Line3, ColNumber, Stack3),
+        get_by_index(Line4, ColNumber, Stack4),
+
+        sub_atom(Stack1, _, 1, 0, Element1),
+        sub_atom(Stack2, _, 1, 0, Element2),
+        sub_atom(Stack3, _, 1, 0, Element3),
+        sub_atom(Stack4, _, 1, 0, Element4),
+
+        Element1 = Color ->
+        (
+            Element1 = Element2, Element2 = Element3, Element3 = Element4
+        );
+        NColNumber is ColNumber + 1,
+        check_verticals(Board, Player-Color, NColNumber)
+
+    ).
+
+check_first_diagonal(Board, Player-Color) :-
+        get_by_index(Board, 0, Line1),
+        get_by_index(Board, 1, Line2),
+        get_by_index(Board, 2, Line3),
+        get_by_index(Board, 3, Line4),
+
+        get_by_index(Line1, 0, Stack1),
+        get_by_index(Line2, 1, Stack2),
+        get_by_index(Line3, 2, Stack3),
+        get_by_index(Line4, 3, Stack4),
+
+        sub_atom(Stack1, _, 1, 0, Element1),
+        sub_atom(Stack2, _, 1, 0, Element2),
+        sub_atom(Stack3, _, 1, 0, Element3),
+        sub_atom(Stack4, _, 1, 0, Element4),
+
+        Element1 = Color ->
+        (
+            Element1 = Element2, Element2 = Element3, Element3 = Element4
+        ).
+
+check_second_diagonal(Board, Player-Color) :-
+        get_by_index(Board, 0, Line1),
+        get_by_index(Board, 1, Line2),
+        get_by_index(Board, 2, Line3),
+        get_by_index(Board, 3, Line4),
+
+        get_by_index(Line1, 3, Stack1),
+        get_by_index(Line2, 2, Stack2),
+        get_by_index(Line3, 1, Stack3),
+        get_by_index(Line4, 0, Stack4),
+
+        sub_atom(Stack1, _, 1, 0, Element1),
+        sub_atom(Stack2, _, 1, 0, Element2),
+        sub_atom(Stack3, _, 1, 0, Element3),
+        sub_atom(Stack4, _, 1, 0, Element4),
+
+        Element1 = Color ->
+        (
+            Element1 = Element2, Element2 = Element3, Element3 = Element4
+        ).
+
+check_diagonals(Board, Player-Color) :-
+    check_first_diagonal(Board, Player-Color);
+    check_second_diagonal(Board, Player-Color).
 
 place_piece(Board, Player-Color, X/Y, PBoard) :-
     get_by_index(Board, Y, Line),

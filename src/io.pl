@@ -40,7 +40,7 @@ main_menu :-
     write('2. - Quit\n').
 
 play_menu :-
-    write('Stacks are represented as "bottom -> top"\n'),
+    write('\n\nStacks are represented as "bottom -> top"\n'),
     write('How would you like to play? Please input the role of each player in the format [P1/P2.].\nAvailable roles:\n[h] - Human player;\n[c-1] - Easy computer;\n[c-2] - Hard computer;\n\n'),
     read(Mode),
     validate_mode(Mode),
@@ -61,8 +61,11 @@ validate_player(h).
 validate_player(c-Level) :-
     1 is Level; 2 is Level.
 
-finish(Winner) :-
-    format('YOU WIN ~w!!! LEZZZZZ GOOOOOO!!!!', [Winner]).
+finish(Winner-Color) :-
+    Color = 'd' -> format('YOU WIN ~w!!! LEZZZZZ GOOOOOO!!!!', ['Player 1']);
+    format('YOU WIN ~w!!! LEZZZZZ GOOOOOO!!!!', ['Player 2']),
+    fail.
+
 
 % BOARD DRAWING %
 
@@ -170,14 +173,10 @@ check_backtrack(CX/CY, NX/NY) :-
     CY = NY, CX = NX.
 
 check_valid_move(CY/CX, NY/NX) :-
-    writeln(CY/CX),
-    writeln(NY/NX),
     (NX is CX + 1 ; NX is CX - 1),
     CY = NY.
 
 check_valid_move(CY/CX, NY/NX) :-
-    writeln(CY/CX),
-    writeln(NY/NX),
     CX = NX,
     (NY is CY + 1 ; NY is CY - 1).
 
