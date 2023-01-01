@@ -39,9 +39,8 @@ menu(main_menu) :-
             menu(play),
             start_game;
         Opt =:= 2 -> 
-            exit_msg,
-            fail;
-        error_msg,
+            menu(quit),
+        error_msg,!,
         menu(main_menu)
     ).
 
@@ -51,34 +50,41 @@ menu(play) :-
     retractall(mode(_)),
     assert(mode(Mode)), !.
 
+wait_for_input :-
+    write('Write anything to continue (p.e: [c.])!\n'),
+    read(X).
+
+clear_screen :-
+    write('\33\[2J').
+
 % GAME LOGIC %
 
 start_game :-
     initial_state(Board),
-    display_game(Board),
     mode(StartPlayer/SndPlayer),
     run_game(Board-16, StartPlayer/d, SndPlayer/l).
 
 initial_state(Board) :-
     board(Board).
 
-% run_game(Board-0, Player, SndPlayer) :-    
-%     end_draw,fail,!.
+run_game(Board-0, Player, SndPlayer) :-    
+    end_draw, abort,!.
 
-% run_game(Board-Turns, Player, SndPlayer) :-
-%     (
-%         game_over(Board, SndPlayer) -> 
-%         (
-%             finish(SndPlayer)
-%         );
-%         game_over(Board, Player) ->
-%         (
-%             finish(Player)
-%         )
-%     ).
+run_game(Board-Turns, Player, SndPlayer) :-
+    game_over(Board, SndPlayer) -> 
+    (
+        finish(SndPlayer)
+    );
+    game_over(Board, Player) ->
+    (
+        finish(Player)
+    ).
 
 run_game(Board-Turns, h/Color, SndPlayer) :-
     (
+        clear_screen,
+        write(Color), write(' is now playing:\n'),
+        display_game(Board),
         get_piece_placement(Board, Pos), % Gets us the position of the stack to be played
         place_piece(Board, h/Color, Pos, PBoard), % Places the piece effectively on the right stack on the board
         display_game(PBoard),
@@ -96,17 +102,21 @@ run_game(Board-Turns, (c-Level)/Color, SndPlayer) :-
     (
         Level is 1 ->
         (
+            clear_screen,
+            write(Color), write(' is now playing:\n'),
+            display_game(Board),
             cpu_placement(Board, (c-Level)/Color, Pos),
             place_piece(Board, (c-Level)/Color, Pos, PBoard),
+            write('This is the board after placing a piece: \n'),
             display_game(PBoard),
-            NewTurns is Turns - 1,    
+            NewTurns is Turns - 1,
             CurrPos = Pos,
             PrevPos = Pos,
             get_stack(PBoard, CurrPos, Stack),
             remove_stack(PBoard, CurrPos, RBoard),
+            write('Movement phase: \n'),
             cpu_movement(Level, RBoard, CurrPos, PrevPos, Stack, MBoard),
-            write('\n\n NEW PLAYER TURN SWITCH AROUND NOW \n\n'),
-            display_game(MBoard),
+            wait_for_input,
             run_game(MBoard-NewTurns, SndPlayer, (c-Level)/Color)
         );
         Level is 2 ->
@@ -204,12 +214,11 @@ game_over(Board, Player) :-
     check_verticals(Board, Player, 0);
     check_diagonals(Board, Player).
 
-check_horizontal(Row, Player-Color) :-
+check_horizontal(Row, Player/Color) :-
     get_by_index(Row, 0, Stack1), 
     get_by_index(Row, 1, Stack2),
     get_by_index(Row, 2, Stack3),
     get_by_index(Row, 3, Stack4),
-
     sub_atom(Stack1, _, 1, 0, Element1),
     sub_atom(Stack2, _, 1, 0, Element2),
     sub_atom(Stack3, _, 1, 0, Element3),
@@ -220,20 +229,20 @@ check_horizontal(Row, Player-Color) :-
         (Element1 = Element2, Element2 = Element3, Element3 = Element4)
     ).
 
-check_horizontals(Board, Player-Color, RowNumber) :-
+check_horizontals(Board, Player/Color, RowNumber) :-
     RowNumber < 4 ->
     (
         get_by_index(Board, RowNumber, Row),
-        check_horizontal(Row, Player-Color) -> 
+        check_horizontal(Row, Player/Color) -> 
         (
             true
         );
         NRowNumber is RowNumber + 1,
-        check_horizontals(Board, Player-Color, NRowNumber)
+        check_horizontals(Board, Player/Color, NRowNumber)
 
     ).
 
-check_verticals(Board, Player-Color, ColNumber) :-
+check_verticals(Board, Player/Color, ColNumber) :-
     ColNumber < 4 ->
     (
         get_by_index(Board, 0, Line1),
@@ -256,11 +265,11 @@ check_verticals(Board, Player-Color, ColNumber) :-
             Element1 = Element2, Element2 = Element3, Element3 = Element4
         );
         NColNumber is ColNumber + 1,
-        check_verticals(Board, Player-Color, NColNumber)
+        check_verticals(Board, Player/Color, NColNumber)
 
     ).
 
-check_first_diagonal(Board, Player-Color) :-
+check_first_diagonal(Board, Player/Color) :-
         get_by_index(Board, 0, Line1),
         get_by_index(Board, 1, Line2),
         get_by_index(Board, 2, Line3),
@@ -281,7 +290,7 @@ check_first_diagonal(Board, Player-Color) :-
             Element1 = Element2, Element2 = Element3, Element3 = Element4
         ).
 
-check_second_diagonal(Board, Player-Color) :-
+check_second_diagonal(Board, Player/Color) :-
         get_by_index(Board, 0, Line1),
         get_by_index(Board, 1, Line2),
         get_by_index(Board, 2, Line3),
@@ -302,9 +311,9 @@ check_second_diagonal(Board, Player-Color) :-
             Element1 = Element2, Element2 = Element3, Element3 = Element4
         ).
 
-check_diagonals(Board, Player-Color) :-
-    check_first_diagonal(Board, Player-Color);
-    check_second_diagonal(Board, Player-Color).
+check_diagonals(Board, Player/Color) :-
+    check_first_diagonal(Board, Player/Color);
+    check_second_diagonal(Board, Player/Color).
 
 place_piece(Board, Player/Color, X/Y, PBoard) :-
     get_by_index(Board, Y, Line),

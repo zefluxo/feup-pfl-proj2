@@ -63,47 +63,81 @@ play_menu(Mode) :-
 
 quit_menu :-
     write('\n\nThank you for playing. Goodbye!\n\n'),
-    fail. 
+    abort. 
 
 display_game(Board) :-
     draw_board(Board).
 
-finish(Winner-Color) :-
-    Color = 'd' -> format('YOU WIN ~w!!! LEZZZZZ GOOOOOO!!!!', ['Player 1']);
-    format('YOU WIN ~w!!! LEZZZZZ GOOOOOO!!!!', ['Player 2']),
-    fail,!.
+finish((c-L)/Color) :-
+    L = 1 ->
+    (
+        write('Roger, roger!\n'),
+        !, abort
+    );
+    (
+        write('I\'m sorry Dave, I\'m afraid I can\'t let you do that...\nI win.\n'),
+        !, abort
+    ).
+
+finish(h/Color) :-
+    Color = 'd' -> 
+    (
+        write('Dark Pieces you won!!!\n'),
+        !, abort
+    );
+    (
+        write('Light Pieces you won!!!\n'),
+        !, abort
+    ).
 
 end_draw :-
-    format('Draw!!!! Looks like you are evenly matched!~n'),
-    fail,!.
+    format('Draw!!!! Looks like you are evenly matched!~n').
 
 % BOARD DRAWING %
 
+% ┌────┬────┬────┬────┐
+% │    │    │    │    │
+% ┼────┼────┼────┼────┼
+% │    │    │    │    │
+% ┼────┼────┼────┼────┼
+% │    │    │    │    │
+% ┼────┼────┼────┼────┼
+% │    │    │    │    │
+% └────┴────┴────┴────┘
 draw_board(Board) :-
-    write('  A B C D '), nl,
-    draw_lines(Board),
+    write('    A   B   C   D  \n  ┌───┬───┬───┬───┐\n'),
+    draw_lines(Board),nl,
     draw_stacks(Board).
 
 draw_lines([]) :-
-    nl.
+    write('  └───┴───┴───┴───┘'),nl.
+
+draw_lines([X]) :-
+    length(L, Length),
+    Length1 is (Length - 4)*(-1),
+    write(Length1),
+    write(' │ '),
+    draw_cells(X),
+    draw_lines(L).
 
 draw_lines([X|L]) :-
     length(L, Length),
     Length1 is (Length - 4)*(-1),
     write(Length1),
-    write('|'),
+    write(' │ '),
     draw_cells(X),
+    write('  ┼───┼───┼───┼───┼\n'),
     draw_lines(L).
 
 draw_cells([]) :- nl,!.
 draw_cells([X|L]) :-
     draw_cell(X),
-    write('|'),
+    write(' │ '),
     draw_cells(L).
 
 draw_cell(X) :-
-    atom_chars(X, NX),
-    write_last(NX).
+    sub_atom(X, _, 1, 0, NX),
+    write(NX).
 
 draw_stacks([]) :- !.
 draw_stacks([X|L]) :-
