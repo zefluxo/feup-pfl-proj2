@@ -1,6 +1,8 @@
 
 % LIST OPERATIONS %
-use_module(library(lists)).
+:- use_module(library(lists)).
+:- use_module(library(between)).
+:- use_module(library(random)).
 
 write_last([X]) :- write(X).
 write_last([_|L]) :-
@@ -68,7 +70,7 @@ quit_menu :-
 display_game(Board) :-
     draw_board(Board).
 
-finish((c-L)/Color) :-
+finish((c-L)/_) :-
     L = 1 ->
     (
         write('Roger, roger!\n'),
@@ -104,19 +106,20 @@ end_draw :-
 % ┼────┼────┼────┼────┼
 % │    │    │    │    │
 % └────┴────┴────┴────┘
-draw_board(Board) :-
-    write('    A   B   C   D  \n  ┌───┬───┬───┬───┐\n'),
-    draw_lines(Board),nl,
+
+draw_board(Board) :-              
+    write('    A   B   C   D  \n  _________________\n'),
+    draw_lines(Board), nl,
     draw_stacks(Board).
 
 draw_lines([]) :-
-    write('  └───┴───┴───┴───┘'),nl.
-
+    write('  _________________'),nl.
+             
 draw_lines([X]) :-
     length(L, Length),
     Length1 is (Length - 4)*(-1),
     write(Length1),
-    write(' │ '),
+    write(' | '),
     draw_cells(X),
     draw_lines(L).
 
@@ -124,15 +127,16 @@ draw_lines([X|L]) :-
     length(L, Length),
     Length1 is (Length - 4)*(-1),
     write(Length1),
-    write(' │ '),
+    write(' | '),
     draw_cells(X),
-    write('  ┼───┼───┼───┼───┼\n'),
+             
+    write('  |---|---|---|---|\n'),
     draw_lines(L).
 
 draw_cells([]) :- nl,!.
 draw_cells([X|L]) :-
     draw_cell(X),
-    write(' │ '),
+    write(' | '),
     draw_cells(L).
 
 draw_cell(X) :-
@@ -152,7 +156,7 @@ draw_stack_line([X|L], R) :-
     C1 is 64+(Length - 4)*(-1),
     char_code(C, C1),
     draw_stack(X, R, C),
-    tab(1),
+    write('\t'),
     draw_stack_line(L, R).
 
 draw_stack(X, R, C) :-
@@ -161,7 +165,7 @@ draw_stack(X, R, C) :-
 % Movement %
 
 get_by_index([X|_], 0, X) :- !.
-get_by_index([X|L], Index, Line) :-
+get_by_index([_|L], Index, Line) :-
     NewIndex is Index-1,
     get_by_index(L, NewIndex, Line).
 
@@ -190,7 +194,7 @@ valid_row_col(Col/Row) :-
 
 valid_piece_placement(Board, Pos) :-
     get_stack(Board, Pos, Stack),
-    not(member(Stack, [' '])).
+    \+ member(Stack, [' ']).
 
 get_piece_placement(Board, Pos) :-
     write('Where would you like to place your piece (Col/Row)?\n'),
@@ -232,7 +236,7 @@ get_move(Board, Stack, CurrPos, PrevPos, Move) :-
         (
             row_col_to_value(Placement, X, Y),
             Pos = X/Y,
-            not(check_backtrack(Pos, PrevPos)) -> 
+            \+ check_backtrack(Pos, PrevPos) -> 
             (
                 row_col_to_value(Placement, X, Y),
                 Pos = X/Y, 

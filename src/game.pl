@@ -10,8 +10,8 @@ board([['tt', ' ', ' ', 'tt'],
        [' ', ' ', ' ', ' '],
        ['tt', ' ', ' ', 'tt']]).
 
-mode(h/h).
-:- dynamic(mode/1).
+:- dynamic game_mode/1.
+game_mode(h/h).
 
 replace([_|T], 0, X, [X|T]):- !.
 replace([H|T], I, X, [H|R]):-
@@ -47,12 +47,12 @@ menu(main_menu) :-
 menu(quit) :- quit_menu.
 menu(play) :- 
     play_menu(Mode),
-    retractall(mode(_)),
-    assert(mode(Mode)), !.
+    retractall(game_mode(_)),
+    assert(game_mode(Mode)), !.
 
 wait_for_input :-
     write('Write anything to continue (p.e: [c.])!\n'),
-    read(X).
+    read(_).
 
 clear_screen :-
     write('\33\[2J').
@@ -61,16 +61,16 @@ clear_screen :-
 
 start_game :-
     initial_state(Board),
-    mode(StartPlayer/SndPlayer),
+    game_mode(StartPlayer/SndPlayer),
     run_game(Board-16, StartPlayer/d, SndPlayer/l).
 
 initial_state(Board) :-
     board(Board).
 
-run_game(Board-0, Player, SndPlayer) :-    
+run_game(_-0, _, _) :-    
     end_draw, abort,!.
 
-run_game(Board-Turns, Player, SndPlayer) :-
+run_game(Board-_, Player, SndPlayer) :-
     game_over(Board, SndPlayer) -> 
     (
         finish(SndPlayer)
@@ -189,17 +189,16 @@ value_move(Board, Bottom, Color, [CurrPos|L], Best-Value, Move) :-
            
     ).
 
-row_value(Board, Color, (X/Y), NValue) :-
+row_value(Board, Color, (X/_), NValue) :-
     nth0(X, Board, Row),
     line_count_color(Row, Color, 0, NValue).
 
-col_value(Board, Color, (X/Y), NValue) :-
-    write('hi'),
+col_value(Board, Color, (_/Y), NValue) :-
     transpose(Board, NBoard),
     nth0(Y, NBoard, Col),
     line_count_color(Col, Color, 0, NValue).
 
-line_count_color([], Color, Value, Value).
+line_count_color([], _, _, _).
 line_count_color([Stack|L], Color, Inc, Value) :-
     atom_chars(Stack, StackChars),
     stack_count_color(StackChars, Color, 0, StackValue),
@@ -243,7 +242,7 @@ stack_count_color([X|L], Color, Inc, Count) :-
     ),
     stack_count_color(L, Color, NInc, Count).
 
-within_board(Board, X/Y) :-
+within_board(_, X/Y) :-
     between(0, 3, X), 
     between(0, 3, Y).
 
@@ -263,10 +262,10 @@ valid_movement(Board, CX/CY, PX/PY, NX/NY) :-
     % inside the board %
     within_board(Board, NX/NY),
     % not backtracking %
-    not(backtracking(PX/PY, NX/NY)),
+    \+ backtracking(PX/PY, NX/NY),
     % orthogonally adjacent %
-    (((plus(CX, -1, NX); succ(CX, NX)), CY = NY);
-    ((plus(CY, -1, NY); succ(CY, NY)), CX = NX)).
+    (((NX is CX - 1; (NX is CX+1, CX >= 0)), CY = NY);
+    ((NY is CY - 1; (NY is CY+1, CY >= 0)), CX = NX)).
     
 find_moves(Board, CurrPos, PrevPos, Moves) :-
     findall(Move, valid_movement(Board, CurrPos, PrevPos, Move), Moves).
@@ -296,7 +295,7 @@ game_over(Board, Player) :-
     check_verticals(Board, Player, 0);
     check_diagonals(Board, Player).
 
-check_horizontal(Row, Player/Color) :-
+check_horizontal(Row, _/Color) :-
     get_by_index(Row, 0, Stack1), 
     get_by_index(Row, 1, Stack2),
     get_by_index(Row, 2, Stack3),
@@ -351,7 +350,7 @@ check_verticals(Board, Player/Color, ColNumber) :-
 
     ).
 
-check_first_diagonal(Board, Player/Color) :-
+check_first_diagonal(Board, _/Color) :-
         get_by_index(Board, 0, Line1),
         get_by_index(Board, 1, Line2),
         get_by_index(Board, 2, Line3),
@@ -397,7 +396,7 @@ check_diagonals(Board, Player/Color) :-
     check_first_diagonal(Board, Player/Color);
     check_second_diagonal(Board, Player/Color).
 
-place_piece(Board, Player/Color, X/Y, PBoard) :-
+place_piece(Board, _/Color, X/Y, PBoard) :-
     get_by_index(Board, Y, Line),
     get_by_index(Line, X, Stack),
     atom_concat(Stack, Color, NStack),
