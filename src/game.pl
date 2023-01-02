@@ -5,7 +5,7 @@
 tan('t').
 dark('d').
 light('l').
-board([['tt', ' ', ' ', 'tt'],
+board([['ttd', ' ', ' ', 'tt'],
        [' ', ' ', ' ', ' '],
        [' ', ' ', ' ', ' '],
        ['tt', ' ', ' ', 'tt']]).
@@ -148,8 +148,6 @@ cpu_movement(Level, Color, Board, CurrPos, PrevPos, Stack, NBoard) :-
                     Value is 100
                 )),
                 value_move(Board, Bottom, Color, Moves, Best-Value, Move),
-                write('Move: '),
-                writeln(Move),
                 NPrevPos = CurrPos,
                 move(Board, Stack, Move, NStack, MBoard),
                 display_game(MBoard),
@@ -158,16 +156,14 @@ cpu_movement(Level, Color, Board, CurrPos, PrevPos, Stack, NBoard) :-
         )
     ).
 
-value_move(Board, Bottom, Color, [], Best-Value, Best):- write('Best: '),writeln(Best).
+value_move(Board, Bottom, Color, [], Best-Value, Best).
 value_move(Board, Bottom, Color, [CurrPos|L], Best-Value, Move) :-
     (
         Bottom = Color ->
         (
-            row_value(Board, Bottom, CurrPos, RowValue),
-            col_value(Board, Bottom, CurrPos, ColumnValue),
+            row_value(Board, Color, CurrPos, RowValue),
+            col_value(Board, Color, CurrPos, ColumnValue),
             NValue is RowValue + ColumnValue,
-            write('NValue: '), writeln(NValue),
-            write('Value: '), writeln(Value),
             (
                 NValue > Value ->
                 value_move(Board, Bottom, Color, L, CurrPos-NValue, Move)
@@ -175,11 +171,9 @@ value_move(Board, Bottom, Color, [CurrPos|L], Best-Value, Move) :-
             )
         );
         (
-            row_value(Board, Bottom, CurrPos, RowValue),
-            col_value(Board, Bottom, CurrPos, ColumnValue),
+            row_value(Board, Color, CurrPos, RowValue),
+            col_value(Board, Color, CurrPos, ColumnValue),
             NValue is RowValue + ColumnValue,
-            write('NValue: '), writeln(NValue),
-            write('Value: '), writeln(Value),
             (
                 NValue < Value ->
                 value_move(Board, Bottom, Color, L, CurrPos-NValue, Move)
@@ -198,13 +192,21 @@ col_value(Board, Color, (_/Y), NValue) :-
     nth0(Y, NBoard, Col),
     line_count_color(Col, Color, 0, NValue).
 
-line_count_color([], _, _, _).
+line_count_color([], Color, Inc, Value) :- Value is Inc.
 line_count_color([Stack|L], Color, Inc, Value) :-
     atom_chars(Stack, StackChars),
     stack_count_color(StackChars, Color, 0, StackValue),
     NInc is StackValue + Inc,
     line_count_color(L, Color, NInc, Value).
 
+stack_count_color([], _, Inc, Count) :- Count is Inc.
+stack_count_color([X|L], Color, Inc, Count) :-
+    (
+        X = Color ->
+        NInc is Inc + 1
+        ;NInc is Inc
+    ),
+    stack_count_color(L, Color, NInc, Count).
 
 cpu_placement(Board, (c-Level)/Color, Place) :-
     (
@@ -232,15 +234,6 @@ value_place(Board, Color, [CurrPos|L], Best-Value, NBest) :-
         value_place(Board, Color, L, CurrPos-StackValue, NBest)
         ;value_place(Board, Color, L, Best-Value, NBest)
     ).
-
-stack_count_color([], _, Count, Count).
-stack_count_color([X|L], Color, Inc, Count) :-
-    (
-        X = Color ->
-        NInc is Inc + 1
-        ;NInc is Inc
-    ),
-    stack_count_color(L, Color, NInc, Count).
 
 within_board(_, X/Y) :-
     between(0, 3, X), 
