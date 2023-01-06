@@ -1,5 +1,11 @@
 # pfl-qawale
 
+### Installation
+
+Start off by installing either SWIProlog or SicStus Prolog compiler, making sure that you clone the main branch if you intend to use SWIProlog or the sicstus branch for SicStus. You can start the program by running `consult('main.pl')` while in the `/src` folder and inputting `play.`
+
+### Project Description
+
 This project was made as part of the PFL unit of the L.EIC course, with the goal being to implement a two-player board game in Prolog, targetting the SICStus Prolog version 4.7.1 compiler. The game should be correctly implemented according to its rules, and presenting the correct current state of the board and the pieces. Furthermore there should be three types of players, Human and 2 levels of CPUs, with 3 modes of use: Human/Human, Human/Computer and Computer/Computer.
 
 The group, Qawale_4, chose the game Qawale to be implemented and is comprised by António Oliveira Santos (up202008004) and José Luís Nunes Osório (up202004653). The workload was evenly distributed, meaning each member contributed 50% effort to its completion.
